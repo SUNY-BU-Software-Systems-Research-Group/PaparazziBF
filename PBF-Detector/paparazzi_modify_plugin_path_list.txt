@@ -1,0 +1,6 @@
+/Makefile:59
+/conf/Makefile.sim:35
+/conf/Makefile.lpc21:139
+/conf/Makefile.nps:39
+/conf/Makefile.linux:33
+/conf/Makefile.stm32:192

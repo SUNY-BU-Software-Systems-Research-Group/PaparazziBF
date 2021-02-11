@@ -1,0 +1,239 @@
+#To be noted is that the line numbers below might not be the same as those in the original Makefiles. Please refer to joezie's modified code if needed. 
+
+*Part 1. remove "-std=c99"
+In this part, I remove the -std=c99 from the following Makefiles
+1. /sw/ground_segment/misc/Makefile:147 & 150
+2. /sw/ext/libopencm3/lib/Makefile.include:31
+
+*Part 2. initialize enum with int value【undo in Part43】
+In this part, I solve the problem that in C, it's allowed that enum could be initialized with an int value, but it's disallowed in C++. I solve it by adding "static_cast<enum XXX>" to it
+1. /sw/ext/libopencm3/lib/ethernet/phy_ksz8051mll.c:54
+2. /sw/ext/libopencm3/lib/stm32/common/timer_common_all.c:1803-1815
+
+*Part 3. remove target "libopencm3.build"【undo in Part43】
+Since we meet a lot of compilation errors when command "make" goes into directory "sw/ext/Makefile" and compile for the target "libopencm3.build", and according to previous experience, it seems that there's no BF in this directory, I decide to temporarily ignore this directory by removing target "libopencm3" and "luftboot" from the dependency list.
+1. /sw/ext/Makefile:36
+
+*Part 4. "main.c"
+In this part, I solve some problems caused by incompatibility between C and C++
+1. /sw/tools/bluegiga_usb_dongle/main.c:552
+	- added (char*) for type conversion
+2. /sw/tools/bluegiga_usb_dongle/main.c:846&898【undo in Part43】
+	- added void* as parameter
+3. /sw/ground_segment/misc/davis2ivy.c:127
+	- added (BOOL) for type conversion
+4. /sw/include/std.h & /sw/airborne/math/pprz_algebra_float.h【already replaced by double version】
+	- changed template<typename T1> template<typename T2> to template<typename T1, typename T2>
+	
+*Part 5. change compiler to clang++【already replaced by clang】
+Since we need to make use of template from C++, not only compilation (.c->.o) needs clang++, linkage of object files (.o->exe) also needs clang++. In this part, I refer to Brian's readme.txt, and change the linkage compiler to clang++ in those Makefiles.
+
+*Part 6. added type conversion
+1. /sw/ground_segment/misc/natnet2ivy.c:955
+	- added type conversion (GIOCondition)
+	
+*Part 7. remove extern "C"
+Since extern "C" makes a function-name in C++ have 'C' linkage, we have to remove them from the following header files for our clang++ compilation.
+1. all header files under directory /sw/airborne/math
+
+*Part 8. added type conversion
+1. /sw/airborne/arch/linux/serial_port.c:76
+	- added type conversion (struct SerialPort*)
+	
+*Part 9. added scope for enum types【undo in Part46】
+In sbp.c, there are a few assignment to enum type within a type-defined struct. Although such assignment is supported by C compiler, for C++ compiler, it would throw an error. We play a trick by adding scopes to these enum types in macro definition.
+1. /sw/ext/libsbp/c/src/sbp.c 
+
+*Part 10. remove "-std=gnu99"
+Similar to Part 1, I remove the -std=gnu99 from the following Makefiles
+1. /sw/ground_segment/misc/Makefile:156 & 159
+2. /sw/logalizer/Makefile:63
+
+*Part 11. added curly braces
+In rtcm3.h, there's a switch-case statement. To fix the "cannot jump from switch statement to case label" error, I added curly braces to each cases.
+1. /sw/airborne/subsystems/gps/librtcm3/rtcm3.h:401-491
+
+*Part 12. change unreasonable argument type
+In rtcm2ivy.c, the function uart_read() has an unreasonable argument type unsigned char (*) [], which makes it very hard to pass an argument to it. So I changed to unsigned char [], and the argument passed don't need to reference using &.
+1. /sw/ground_segment/misc/rtcm2ivy.c:96&230
+
+*Part 13. added type conversion
+1. /sw/tools/mergelogs.c:35&70&73
+
+*Part 14. added type conversion
+1. /sw/ground_segment/tmtc/app_server.c:281,305,339,380,392,404,413
+
+*Part 15. remove target "input2ivy"
+1. /sw/ground_segment/joystick/Makefile:76
+
+*Part 16. added type conversion
+1. /sw/ground_segment/lpc21lap/lpc21lap.c:186,196,492,500,508,568
+
+*Part 17. change compiler to clang++【already replaced by clang】
+When trying out the GUI compilation, we met the compilation error concerning C++ template isn't supported. Therefore, we need to change the compiler in several makefiles into clang++
+1. /conf/Makefile.sim:32-42
+
+*Part 18. remove -std=gnu99
+1. /conf/Makefile.sim:69
+
+*Part 19. turn the type of bound parameters from reference parameter to formal parameter
+The error "candidate function not viable expects an l-value" indicates that the type of bound parameters isn't right. They need to be T2 const& instead of just T2
+1. /sw/include/std.h
+
+*Part 20. explicitly convert type from double to float (by adding f to decimals or explicit conversion)
+1. /sw/airborne/modules/nav/nav_vertical_raster.c:68,81
+2. /sw/airborne/modules/nav/nav_line.c:60,73
+3. /sw/airborne/modules/nav/nav_line_border.c:60,64,71,75
+4. /sw/airborne/subsystems/ins/ins_alt_float.c:104
+
+*Part 21. add ; to BF instances
+Because we use the trick turning BF from MACRO into FUNCTION, we need to add ; to each BF instances.
+1. /sw/airborne/subsystems/ins/ins_alt_float.c:236
+
+*Part 22. solve multiple definition error
+Since in C, multiple definition is allowed while in C++ it's forbidden, a link-time error would occur because of multiple definition of the same variable in different .o files. We can solve this by adding option "-z muldefs" to the compilation command
+1. /conf/Makefile.sim:116
+
+*Part 23. replace bounding function call in bounding functions
+To prevent the adundant discovery of BF instances within the implementation of BF function just because one BF calls another (e.g BoundAbs calls Bound), we replace the calls with the body of that call.
+1. /sw/include/std.h
+
+*Part 24. change /conf/Makefile.lpc21 like what we did in /conf/Makefile.sim
+We added definition of $(MYCC) and $(RULE) and also added option $(RULE) to compilation commands
+1. /conf/Makefile.lpc21:135-144,267,272
+
+*Part 25. resolve incompability problems in /conf/Makefile.lpc21
+We remove unsupported options from compilation commands; 
+1. /conf/Makefile.lpc21:59,76,86,111,268,273,279
+
+*Part 26. change /conf/Makefile.nps like what we did in /conf/Makefile.sim
+We added definition of $(MYCC) and $(RULE) and also added option $(RULE) to compilation commands; removed std=gnu99
+1. /conf/Makefile.nps:36-45,61,106,110,116,122,128,134
+
+*Part 27. remove extern C
+1. /sw/simulator/nps/nps_fdm.h:26,143
+
+*Part 28. added type conversion
+1. /sw/airborne/modules/computer_vision/lib/encoding/rtp.c:132
+2. /sw/airborne/arch/sim/mcu_periph/udp_arch.c:73
+3. /sw/airborne/modules/computer_vision/cv.c:49,89,149
+4. /sw/airborne/modules/computer_vision/lib/vision/image.c:121,122,233,278,307,308
+5. /sw/airborne/modules/computer_vision/lib/encoding/jpeg.c:411,412
+6. /sw/airborne/modules/geo_mag/geo_mag.c:83-85
+7. /sw/airborne/firmwares/rotorcraft/navigation.c:651-690
+
+*Part 29. added ; to Bound
+1. /sw/airborne/subsystems/ahrs/ahrs_int_cmpl_quat.c:374
+
+*Part 30. changed EXTERN to extern
+1. /sw/airborne/subsystems/datalink/datalink.h:65
+
+*Part 31. added -z muldefs
+1. /conf/Makefile.nps:101
+
+*Part 32. inttypes.h
+To resolve the compilation error "typedef redefinition with different types", we modify the conflicting definitions in inttypes.h.
+1. /sw/airborne/arch/lpc21/inttypes.h:21,24
+
+*Part 33. mimic Makefile.sim's way to modify Makefile.linux
+1. /conf/Makefile.linux:30-38,45,46,77,128,134,141
+
+*Part 34. add ARM options to compilation action
+To solve the error "unknown target cpu 'armv7-a'", I added the ARM options $(ARM_INCLUDE) and $(ARM_SPEC) to compilation actions.
+1. /conf/Makefile.linux:134,141
+
+*Part 35. type conversion
+1. /sw/airborne/arch/linux/mcu_periph/i2c_arch.c:174,179
+2. /sw/airborne/modules/computer_vision/lib/v4l/v4l2.c:279
+3. /sw/airborne/boards/ardrone/navdata.c:284
+
+*Part 36. rename variable 'class'
+A variable is named class, and it happens to be a keyword in C++, so I renamed it to class_
+1. /sw/airborne/modules/gps/gps_ubx_ucenter.c:239-251
+
+*Part 37. type conversion
+1. /sw/airborne/modules/computer_vision/lib/isp/libisp.c:235,250
+
+*Part 38. add extern to struct declaration in header file
+Lacking of keyword 'extern', there's a redefinition error because of the redefinition of a struct defined in both header file and source file. I added extern in header file to solve this.
+1. /sw/airborne/boards/bebop.h:65
+
+*Part 39. add -Wno-narrowing to compilation action
+To suppress the error "Constant expression evaluates to -1 which cannot be narrowed to type 'uint32_t'", I added -Wno-narrowing to compilation action
+1. /conf/Makefile.linux:135
+
+*Part 40. rename variable 'new'
+A variable is named new, and it happens to be a keyword in C++, so I renamed it to new_
+1. /sw/airborne/firmwares/rotorcraft/stabilization/stabilization_indi_simple.c:278-294
+
+*Part 41. modify increment of enum type
+Since in C++, enum type can't increment, we use convert it to int and increment and then convert back to enum type.
+1. /sw/airborne/peripherals/mpu60x0.c:config->init_status++
+
+*Part 42. mimic Makefile.lpc21 to modify Makfile.stm32
+Added $(MYCC) and $(RULE) to Makefile.stm32, and also removed some options
+1. /conf/Makefile.stm32:119,124,189-199,252,259
+
+*Part 43. undo Part 2&3
+Undo Part 2 & 3 & 4.2 for sake of compilation of files in /sw/ext/libopencm3
+
+*Part 44. removed naked
+Since clang doesn't support non-ASM statement in naked function, we removed naked from the declaration of several functions.
+1. /sw/ext/libopencm3/include/libopencm3/cm3/scb.h:441,446
+
+*Part 45. added -z muldefs
+To solve the multiple definition link-time error, I added -z muldefs to the linking action
+1. /sw/ground_segment/misc/Makefile:108,116,124
+2. /conf/Makefile.stm32:246
+
+*Part 46. undo Part 9
+For sake of successful compilation in C style
+
+*Part 47. added -D __ARM_ARCH_7M__ to compilation action
+It's the precondition of defining macro SCB_AIRCR_PRIGROUP_NOGROUP_SUB16
+1. /conf/Makefile.stm32:252
+
+*Part 48. 'double version' of BF definition 【further modifications in Part 49&50】
+In order to change C++ compilation back to C, I changed the parameter type of BF to double in several header files.
+A. backup files (the original version)
+  1. sw/airborne/math/pprz_algebra_float(.original).h
+  2. sw/airborne/firmwares/rotorcraft/stabilization/attitude_ref_saturate_naive(.original).h
+  3. sw/include/std(.original).h
+B. template version
+  1. sw/airborne/math/pprz_algebra(.template).h
+  2. sw/airborne/math/pprz_algebra_float(.template).h
+  3. sw/airborne/firmwares/rotorcraft/stabilization/attitude_ref_saturate_naive(.template).h
+  4. sw/include/std(.template).h
+C. void pointer version
+  1. sw/airborne/math/pprz_algebra(.voidptr).h
+D. double version
+  1. sw/airborne/math/pprz_algebra_float.h
+  2. sw/airborne/firmwares/rotorcraft/stabilization/attitude_ref_saturate_naive.h
+  3. sw/include/std.h
+
+*Part 49. change some BF in pprz_algebra.h to 'GenericFloatStruct and GenericDoubleStruct version'
+In order to change C++ compilation back to C, I changed the parameter type of several BF to GenericFloatStruct in pprz_algebra.h. Besides, I also need to add type conversion to BF instances in source codes.
+1. sw/airborne/math/pprz_algebra.h: RATES_BOUND_CUBE, RATES_BOUND_BOX, RATES_BOUND_BOX_ABS
+2. sw/airborne/firmwares/rotorcraft/stabilization/attitude_ref_saturate_naive.h:65,79
+3. sw/airborne/firmwares/rotorcraft/stabilization/stabilization_attitude_ref_euler_int.c:135
+4. sw/airborne/firmwares/rotorcraft/stabilization/stabilization_attitude_euler_int.c:232
+5. sw/airborne/firmwares/rotorcraft/stabilization/stabilization_rate.c:199
+
+*Part50. added BF types under dir /sw/airborne/math
+1. sw/airborne/math/pprz_algebra_int.h: INT32_ANGLE_NORMALIZE and INT32_COURSE_NORMALIZE
+
+*Part51. added ; after BF instance
+1. sw/airborne/firmwares/fixedwing/guidance/energy_ctrl.c:434
+
+*Part52. removed dependencies in several makefiles
+Since I previously deleted several git submodules, I have to remove several dependencies from makefiles so that "make" command from paparazzi root directory can work successfully.
+1. /sw/ext/Makefile:56
+
+*Part53. set ARM_INCLUDE and ARM_SPEC to empty
+There are a few "inttype.h not found" problem caused by ARM_INCLUDE and ARM_SPEC, which misled the compiler to compile as an ARM machine. To use AC_COMPILE_SCRIPT.sh from "paparazzi_code_analysis" repository, we have to set them to empty in the following Makefiles.
+1. /Makefile:59
+2. /conf/Makefile.sim:35
+3. /conf/Makefile.lpc21:139
+4. /conf/Makefile.nps:39
+5. /conf/Makefile.linux:33
+6. /conf/Makefile.stm32:192
