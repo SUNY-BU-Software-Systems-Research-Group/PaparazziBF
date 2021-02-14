@@ -7,3 +7,5 @@ This is a repo with artifacts for bounding function (BF) analysis in Paparazzi.
 * Directory "log_analysis_and_remote_control_scripts": scripts for statistical analysis and for reproducing the simulation results
 * "BV_details.xlsx": a detailed documentation on each BF use
 * "Report_for_Bounding_Function_Taxonomy.pdf": a report of the complete BF taxonomy
+
+[![DOI](https://zenodo.org/badge/338132550.svg)](https://zenodo.org/badge/latestdoi/338132550)
